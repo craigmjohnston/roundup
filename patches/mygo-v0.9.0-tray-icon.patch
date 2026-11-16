@@ -1,0 +1,78 @@
+--- a/internal/darwin/menu.go
++++ b/internal/darwin/menu.go
+@@ -484,17 +484,50 @@
+ 			err = errInvalidImage
+ 			return
+ 		}
+-		// Menu bar icons are 18 points tall.
++		// A template icon is a glyph, 18 points tall inside the item's padding.
++		// An icon in color keeps its own size and the item takes its width, so
++		// the icon covers the item and can draw its whole background.
+ 		size := msgSize(img, sel("size"))
+-		if size.Height > 0 {
+-			msgSetSize(img, sel("setSize:"), NSSize{size.Width * 18 / size.Height, 18})
++		length := float64(-1) // NSVariableStatusItemLength
++		if template {
++			if size.Height > 0 {
++				msgSetSize(img, sel("setSize:"), NSSize{size.Width * 18 / size.Height, 18})
++			}
++		} else if size.Width > 0 {
++			length = size.Width
+ 		}
+ 		send(img, "setTemplate:", boolArg(template))
+ 		send(t.button, "setImage:", uintptr(img))
++		msgSetFloat(t.item, sel("setLength:"), length)
+ 	})
+ 	return err
+ }
+ 
++// cellContentsMask is NSContentsCellMask.
++const cellContentsMask = 1
++
++// SetAlternateImage sets the image in color that AppKit shows instead of the
++// item's image while the item is highlighted; nil shows the image itself.
++func (t *tray) SetAlternateImage(png []byte) error {
++	var err error
++	withPool(func() {
++		if png == nil {
++			send(t.button, "setAlternateImage:", 0)
++			return
++		}
++		img := autorelease(send(send(class("NSImage"), "alloc"), "initWithData:", uintptr(nsData(png))))
++		if img == 0 {
++			err = errInvalidImage
++			return
++		}
++		send(t.button, "setAlternateImage:", uintptr(img))
++		// A button cell shows its alternate image only when it highlights by its contents.
++		cell := send(t.button, "cell")
++		send(cell, "setHighlightsBy:", uintptr(sendInt(cell, "highlightsBy")|cellContentsMask))
++	})
++	return err
++}
++
+ func (t *tray) SetTitle(title string) {
+ 	withPool(func() { send(t.button, "setTitle:", uintptr(nsString(title))) })
+ }
+--- a/modules.go
++++ b/modules.go
+@@ -877,6 +877,19 @@
+ 	return err
+ }
+ 
++// SetHighlightedIcon sets an icon in color to show in place of the icon
++// while the tray icon is highlighted: pressed, or while its menu or flyout
++// shows (macOS). It should be the icon's size; nil shows the icon itself.
++func (t *Tray) SetHighlightedIcon(png []byte) error {
++	var err error
++	t.do(func(n platform.Tray) {
++		if h, ok := n.(interface{ SetAlternateImage([]byte) error }); ok {
++			err = h.SetAlternateImage(png)
++		}
++	})
++	return err
++}
++
+ // SetTitle sets the text next to the icon (macOS). Its digits all have
+ // the same width, so a number that changes, such as a rate, keeps the
+ // item's width as long as the text keeps its length: pad the value to a
