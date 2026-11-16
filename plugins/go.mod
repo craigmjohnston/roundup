@@ -6,7 +6,7 @@ require (
 	github.com/chromedp/cdproto v0.157.8
 	github.com/chromedp/chromedp v0.21.0
 	github.com/coder/websocket v1.8.15
-	github.com/craigmjohnston/roundup v0.0.0-00010101000000-000000000000
+	github.com/craigmjohnston/roundup v0.0.0-20261116193550-3b136398a147
 	github.com/spf13/cobra v1.10.2
 	github.com/zalando/go-keyring v0.2.8
 )

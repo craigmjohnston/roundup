@@ -29,7 +29,7 @@ There are two Go modules, tied together for local work by `go.work` at the repos
 | Root | `github.com/craigmjohnston/roundup` | The app, `task`, `protocol`, `config`, `external`, `install`. Depends on MyGo, through a `replace` to the patched copy in `third_party/mygo`. |
 | Plugins | `github.com/craigmjohnston/roundup/plugins` | The Slack and GitHub plugins. Depends on the root module for `task` and `protocol`, and on chromedp, cobra and go-keyring. It has no `replace` and no MyGo dependency, so `go install` accepts it. |
 
-`go install pkg@version` refuses a module whose `go.mod` has a `replace`, which is why the plugins are their own module. The plugins module requires the root module at the placeholder version `v0.0.0-00010101000000-000000000000`; `go.work` has a `replace` for that version that points at the repository root, so local builds use the working tree. `make build`, `make test` and `go vet` cover both modules with `./... ./plugins/...`. Run `go mod tidy` in each module with `GOWORK=off`.
+`go install pkg@version` refuses a module whose `go.mod` has a `replace`, which is why the plugins are their own module. The plugins module requires a published commit of the root module by its pseudo-version, and `go.work` uses both modules, so local builds use the working tree. A plugin change that needs an unpublished core change goes in two pushes: the core first, then `go mod edit -require=github.com/craigmjohnston/roundup@<pseudo-version>` in `plugins/`. `make build`, `make test` and `go vet` cover both modules with `./... ./plugins/...`. Run `go mod tidy` in each module with `GOWORK=off`.
 
 ## Task model
 
